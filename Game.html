@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Fuey Score</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/react.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/JSXTransformer.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+</head>
+<body>
+	
+  <div id="content"></div>
+  <script type="text/jsx">
+    //Should I be maintaining state ate the lowest level that can view everything (in this case the whole game)
+    //Or should I be doing something like the round component has a state of round, while game maintains a list of rounds
+    //if so, how could game view state of child
+    //if not, it seems we have to pass a function from parent level compenent all the way down to lowest child that needs it
+    //Basically functions have to be declared at the level of where the state is handled and passed down? Can't skip a level?
+
+    var PlayersHeader = React.createClass({
+      render: function(){
+        return (
+          <thead>
+            <tr>
+              <th>Players</th>
+              {this.props.players.map(function(player){
+                return(
+                  <th key={player.id}>{player.name}</th>
+                  )
+              })}
+            </tr>
+          </thead>
+        )
+      }
+    });
+
+    var PlayersTotalScoreFooter = React.createClass({
+      render: function(){
+        return(
+          <tr>
+            <td>Total Score</td>
+            {this.props.players.map(function(player){
+              return(
+                <td key={"totalScore" + player.id}>{player.totalScore}</td>
+                )
+            })}
+          </tr>
+        )
+      }
+    });
+
+    var Rounds = React.createClass({
+      render: function(){
+        var currentRound = this.props.currentRound;
+        var updateBidState = this.props.updateBidState;
+        var updateSucceededState = this.props.updateSucceededState;
+        var players = this.props.players;
+        return(
+          <tbody>
+            {Array.apply(0, Array(currentRound)).map(function(x, i){
+              return(
+                <tr key={"round" + i}>
+                  <td>{"Round " + (i + 1)}</td>
+                  {players.map(function(player){
+                    return(
+                      <td key={"player" + player.id}>
+                        <PlayerRound 
+                          player={player} 
+                          roundNum={i}
+                          updateBidState = {updateBidState}
+                          updateSucceededState = {updateSucceededState}/>
+                      </td>
+                    )  
+                  })}
+                </tr>
+              )
+            })}
+            <PlayersTotalScoreFooter players={players} />
+          </tbody>
+        )
+      }
+    });
+
+    var PlayerRound = React.createClass({
+      updateBidState: function(event){
+        this.props.updateBidState(this.props.player.id, this.props.roundNum, event.target.value)
+      },
+      updateSucceededState: function(event){
+        this.props.updateSucceededState(this.props.player.id, this.props.roundNum, event.target.value)
+      },
+      render: function(){
+        var round = this.props.player.rounds[this.props.roundNum];
+        return(
+          <table>
+            <tr>
+              <td>
+                <div>{round.initialScore}</div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <input type="number"  min="0" onChange={this.updateBidState} value={round.bid}></input>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <select className="form-control" value = {round.succeeded} onChange={this.updateSucceededState}>
+                  <option value = "">Not Decided</option>
+                  <option value = "1">Took Their Tricks</option>
+                  <option value = "-1">Over Or Under Took</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div>{(round.resultingScore) ? round.resultingScore : 'N/A'}</div>
+              </td>
+            </tr>
+          </table>
+        )
+      }
+    });
+  
+    //Initial state defaults. These will be passed into page 
+    var startingRound = [{initialScore : 0, bid : null, succeeded : "", resultingScore : null}, {initialScore : 0, bid : null, succeeded : "", resultingScore : null}, {initialScore : 0, bid : null, succeeded : "", resultingScore : null}];
+
+    var players = [
+      {id: 0, name: "Dale", rounds : startingRound, totalScore : 0},
+      {id: 1, name: "Lori", rounds : startingRound, totalScore : 0},
+      {id: 2, name: "Alex", rounds : startingRound, totalScore : 0},
+      {id: 3, name: "Kitty", rounds : startingRound, totalScore : 0},
+    ];
+
+    var Game = React.createClass({
+      getInitialState: function() {
+        return ({
+          currentRound : 3,
+          players : players
+        });
+      },
+      validateCurrentRoundComplete: function(event){
+        var currentRound = this.state.currentRound;
+        this.state.players.forEach(function(player){
+          if(player.rounds[currentRound].resultingScore == null){
+            event.preventDefault();
+            alert('Must complete round information for ' + player.name);
+            return;
+          }
+        });
+      },
+      updateBidState: function(playerId, roundNum, bidAmount){
+        console.log(this.state)
+        var updatedPlayers = this.state.players;
+        updatedPlayers[playerId].rounds[roundNum].bid = bidAmount;
+        this.setState({
+          players : updatedPlayers
+        });
+      },
+      updateSucceededState: function(playerId, roundNum, succeeded){
+        var updatedPlayers = this.state.players;
+        updatedPlayers[playerId].rounds[roundNum].succeeded = succeeded;
+
+        this.setState({
+          players : updatedPlayers
+        });
+      },
+      updatePlayerRoundScore: function(playerId, roundNum){
+        var updatedPlayers = this.state.players;
+        var playerRound = updatedPlayers[playerId].rounds[roundNum];
+        var bid = playerRound.bid;
+        var succeeded = playerRound.succeeded;
+        if(bid != null && succeeded != ""){
+          if(succeeded == 1){
+            if(playerRound.bid == 0){
+              playerRound.resultingScore = playerRound.initialScore + 5;
+            } else{
+              playerRound.resultingScore = playerRound.initialScore + playerRound.bid + 10;
+            }
+          } else if(succeeded == -1){
+            playerRound.resultingScore = playerRound.initialScore - playerRound.bid;
+          }
+          updatedPlayers[playerId].rounds[roundNum] = playerRound;
+          this.setState({
+            players : updatedPlayers
+          })
+        }
+      },
+      render: function() {
+        return (
+          <div>
+            <h1>Play Fuey!!!</h1>
+            <table>
+              <PlayersHeader players={this.state.players} />
+              <Rounds 
+                players = {this.state.players} 
+                currentRound = {this.state.currentRound}
+                updateBidState = {this.updateBidState}
+                updateSucceededState = {this.updateSucceededState}/>
+            </table>
+            <button onClick={this.validateCurrentRoundComplete}>Round Complete!</button>
+          </div>
+        )
+      }
+    })
+    React.render(
+      <Game />, document.getElementById('content')
+    );
+  </script>
+
+</body>
+</html>

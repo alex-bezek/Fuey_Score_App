@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Fuey Score</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/react.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/JSXTransformer.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+</head>
+<body>
+
+  <div id="content"></div>
+
+  <script type="text/jsx">
+  
+    var Player = React.createClass({
+      //Is it this components job to prevent form submission with prevent default?
+      handlePlayerAdded: function(event){
+        event.preventDefault();
+        this.props.onPlayerAdded(this.props.name);
+      },
+      handlePlayerRemoved: function(event){
+        event.preventDefault();
+        this.props.onPlayerRemoved(this.props.id);
+      },
+      handleNameChange: function(event){
+        this.props.onNameChange(this.props.id, event.target.value);
+      },
+      render: function(){
+        return (
+          <div>
+            <input type="text" name={"player" + this.props.id} placeholder="Player Name" val={this.props.name} onChange={this.handleNameChange} ></input>
+            <button name="button" title="Add Another Player" onClick={this.handlePlayerAdded}>+</button>
+            <button name="button" title="Remove this Player" onClick={this.handlePlayerRemoved}>-</button>
+          </div>
+        )
+      }
+
+    });
+
+    var PlayerList = React.createClass({
+      render: function(){
+        var onPlayerAdded = this.props.onPlayerAdded;
+        var onPlayerRemoved = this.props.onPlayerRemoved;
+        var onNameChange = this.props.onNameChange;
+        return (
+          <div>
+            {this.props.addedPlayers.map(function(player){
+              return (
+                <Player id={player.id} 
+                        key={player.id} 
+                        name={player.name} 
+                        onPlayerAdded={onPlayerAdded} 
+                        onPlayerRemoved={onPlayerRemoved}
+                        onNameChange={onNameChange}/>  
+              )
+            })}
+          </div>
+        )
+      }
+    });
+
+    var AddPlayers = React.createClass({
+      getInitialState: function() {
+          return ({
+            addedPlayers : [{id: 0, name: ''}]
+          });
+      },
+      handlePlayerAdded: function(playerName){
+        console.log(playerName);
+        if(playerName === ''){
+          alert('Please insert a player name before adding more players');
+        } else{
+          var newAddedPlayers = this.state.addedPlayers;
+          newAddedPlayers.push({id: newAddedPlayers[newAddedPlayers.length-1].id + 1, name: ''})
+
+          this.setState({
+            addedPlayers : newAddedPlayers
+          })
+        }
+      },
+      handlePlayerRemoved: function(id){
+        if(id){
+          this.setState({
+            addedPlayers : this.state.addedPlayers.filter(function(player){
+              return player.id != id;
+            })
+          }) 
+        }
+      },
+      handleNameChange: function(id, name){
+        console.log(this.state)
+        if(id != null){
+          this.setState({
+            addedPlayers : this.state.addedPlayers.map(function(player){
+              if(player.id == id){
+                player.name = name;
+              }
+              return player;
+            })
+          })
+        }
+      },
+      onSubmit: function(event){
+        var addedPlayers = this.state.addedPlayers;
+        if(addedPlayers[addedPlayers.length - 1].name === ''){
+          alert('Please fill out all players names or remove blank players');
+          event.preventDefault();
+        }
+      },
+      render: function() {
+          return (
+            <div>
+              <h2>Input Players!</h2>
+              <form id="inputPlayersForm" action="" method="get">
+                <PlayerList 
+                  addedPlayers={this.state.addedPlayers} 
+                  onPlayerAdded={this.handlePlayerAdded} 
+                  onPlayerRemoved={this.handlePlayerRemoved} 
+                  onNameChange={this.handleNameChange} />
+              </form>
+              <button name="submit" form="inputPlayersForm" title="Start the Game!" onClick={this.onSubmit}>Start Playing!</button>
+            </div>
+          );
+        }
+    });
+
+
+    React.render(
+      <AddPlayers />, document.getElementById('content')
+    );
+
+  </script>
+
+</body>
+</html>
